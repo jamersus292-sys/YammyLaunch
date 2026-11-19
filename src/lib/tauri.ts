@@ -214,6 +214,8 @@ export const api = {
   setActiveAccount: (id: string) => invoke<void>("set_active_account", { id }),
   startMsaLogin: () => invoke<string>("start_msa_login"),
   cancelMsaLogin: (sessionId: string) => invoke<void>("cancel_msa_login", { sessionId }),
+  openMsaLoginWindow: (userCode: string) => invoke<void>("open_msa_login_window", { userCode }),
+  closeMsaLoginWindow: () => invoke<void>("close_msa_login_window"),
 
   searchMods: (query: string, gameVersion: string, loader: string, offset: number) =>
     invoke<SearchResponse>("search_mods", { query, gameVersion, loader, offset }),

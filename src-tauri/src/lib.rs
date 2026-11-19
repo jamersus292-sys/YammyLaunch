@@ -292,6 +292,38 @@ fn cancel_msa_login(state: State<'_, AppState>, session_id: String) {
     auth::cancel_device_flow(&state, &session_id);
 }
 
+/// Открывает страницу входа Microsoft во встроенном окне лаунчера (как в Lunar Client).
+/// Код устройства подставляется в URL, пользователю остаётся ввести логин и пароль.
+#[tauri::command]
+async fn open_msa_login_window(app: AppHandle, user_code: String) -> Result<()> {
+    use tauri::Manager;
+    // закрываем предыдущее окно входа, если осталось
+    if let Some(w) = app.get_webview_window("msa-login") {
+        let _ = w.close();
+    }
+    let url = format!("https://www.microsoft.com/link?otc={}", user_code.trim());
+    let parsed: tauri::Url = url
+        .parse()
+        .map_err(|_| error::Error::msg("Некорректный URL входа"))?;
+    tauri::WebviewWindowBuilder::new(&app, "msa-login", tauri::WebviewUrl::External(parsed))
+        .title("Вход Microsoft — YammyLaunch")
+        .inner_size(520.0, 680.0)
+        .min_inner_size(420.0, 520.0)
+        .center()
+        .resizable(true)
+        .build()
+        .map_err(|_| error::Error::msg("Не удалось открыть окно входа"))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn close_msa_login_window(app: AppHandle) {
+    use tauri::Manager;
+    if let Some(w) = app.get_webview_window("msa-login") {
+        let _ = w.close();
+    }
+}
+
 // ---------- моды ----------
 
 #[tauri::command]
@@ -508,6 +540,8 @@ pub fn run() {
             set_active_account,
             start_msa_login,
             cancel_msa_login,
+            open_msa_login_window,
+            close_msa_login_window,
             search_mods,
             install_mod,
             list_mods,

@@ -24,13 +24,18 @@ export default function MsaLoginModal({ onClose }: { onClose: () => void }) {
         await listen<DeviceCodeInfo>("auth://device-code", (e) => {
           sessionId = e.payload.sessionId;
           setInfo(e.payload);
-          openUrl(e.payload.verificationUri).catch(() => {});
+          // открываем окно входа внутри лаунчера, код подставлен автоматически
+          api.openMsaLoginWindow(e.payload.userCode).catch(() => {
+            // если встроенное окно не открылось — запасной вариант через браузер
+            openUrl(e.payload.verificationUri).catch(() => {});
+          });
         })
       );
       unlisteners.push(
         await listen("auth://success", async () => {
           setDone(true);
           sfx.success();
+          api.closeMsaLoginWindow().catch(() => {});
           await refreshAccounts();
           toast("Вход через Microsoft выполнен!", "success");
           setTimeout(onClose, 1500);
@@ -39,6 +44,7 @@ export default function MsaLoginModal({ onClose }: { onClose: () => void }) {
       unlisteners.push(
         await listen<{ sessionId: string; error: string }>("auth://error", (e) => {
           setError(e.payload.error);
+          api.closeMsaLoginWindow().catch(() => {});
         })
       );
       try {
@@ -50,6 +56,7 @@ export default function MsaLoginModal({ onClose }: { onClose: () => void }) {
     return () => {
       unlisteners.forEach((u) => u());
       if (sessionId) api.cancelMsaLogin(sessionId).catch(() => {});
+      api.closeMsaLoginWindow().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -95,9 +102,8 @@ export default function MsaLoginModal({ onClose }: { onClose: () => void }) {
         ) : info ? (
           <div className="space-y-4">
             <p className="text-sm text-muted">
-              1. Откроется страница Microsoft (или перейдите по ссылке ниже).
-              <br />
-              2. Введите этот код:
+              Открылось окно входа Microsoft. Введи там логин и пароль от аккаунта — код уже подставлен.
+              После входа окно закроется само.
             </p>
             <div className="flex items-center gap-2">
               <div className="flex-1 text-center text-2xl font-mono font-bold tracking-[0.3em] bg-bg rounded-lg py-3 border border-accent/30 text-accent">
@@ -112,11 +118,11 @@ export default function MsaLoginModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
             <button
-              onClick={() => openUrl(info.verificationUri)}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-panel-2 hover:bg-border text-sm transition-colors"
+              onClick={() => api.openMsaLoginWindow(info.userCode).catch(() => openUrl(info.verificationUri))}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-panel-2 hover:bg-border text-sm transition-colors cursor-pointer"
             >
               <ExternalLink size={15} />
-              {info.verificationUri}
+              Открыть окно входа снова
             </button>
             <div className="flex items-center gap-2 text-sm text-muted justify-center">
               <Loader2 size={15} className="animate-spin" />
