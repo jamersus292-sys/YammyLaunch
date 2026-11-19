@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { motion } from "framer-motion";
 import { Play, Square, Loader2, ChevronDown, FolderOpen } from "lucide-react";
-import { api, LogLine } from "../lib/tauri";
-import { useStore, activeAccount } from "../stores/app";
+import { api, LogLine, skinHeadUrl } from "../lib/tauri";
+import { useStore } from "../stores/app";
 import { sfx } from "../lib/sounds";
 import ProgressBar from "../components/ProgressBar";
 import LogConsole from "../components/LogConsole";
@@ -29,14 +29,24 @@ export default function PlayPage() {
   const setProgress = useStore((s) => s.setProgress);
   const toast = useStore((s) => s.toast);
   const setPage = useStore((s) => s.setPage);
+  const accounts = useStore((s) => s.accounts);
+  const refreshAccounts = useStore((s) => s.refreshAccounts);
 
   const [showLog, setShowLog] = useState(false);
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [dropdown, setDropdown] = useState(false);
+  const [accDropdown, setAccDropdown] = useState(false);
 
   const selected = instances.find((i) => i.id === selectedId) ?? instances[0] ?? null;
   const isRunning = selected ? running.includes(selected.id) : false;
-  const account = activeAccount();
+  const account = accounts.accounts.find((a) => a.id === accounts.activeId) ?? null;
+
+  const pickAccount = async (id: string) => {
+    sfx.click();
+    await api.setActiveAccount(id);
+    await refreshAccounts();
+    setAccDropdown(false);
+  };
 
   useEffect(() => {
     if (!selectedId && instances.length > 0) setSelectedId(instances[0].id);
@@ -175,6 +185,65 @@ export default function PlayPage() {
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* выбор аккаунта */}
+            <div className="relative w-80">
+              <button
+                onClick={() => { sfx.click(); setAccDropdown(!accDropdown); setDropdown(false); }}
+                className="w-full glass rounded-xl px-4 py-2.5 flex items-center gap-3 hover:border-accent/40 transition-colors cursor-pointer"
+              >
+                {account ? (
+                  <>
+                    <img
+                      src={skinHeadUrl(account)}
+                      alt=""
+                      className="w-8 h-8 rounded-md border border-border"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate">{account.username}</div>
+                      <div className="text-[11px] text-muted">
+                        {account.kind === "msa" ? "Microsoft" : "Оффлайн"}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-left flex-1 text-sm text-muted">Выбери аккаунт…</div>
+                )}
+                <ChevronDown size={16} className={clsx("text-muted transition-transform", accDropdown && "rotate-180")} />
+              </button>
+              {accDropdown && (
+                <div className="absolute top-full mt-2 w-full glass rounded-xl overflow-hidden z-20 max-h-64 overflow-y-auto">
+                  {accounts.accounts.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => pickAccount(a.id)}
+                      className={clsx(
+                        "w-full text-left px-4 py-2.5 hover:bg-panel-2 transition-colors text-sm cursor-pointer flex items-center gap-3",
+                        a.id === accounts.activeId && "bg-accent/10 text-accent"
+                      )}
+                    >
+                      <img
+                        src={skinHeadUrl(a)}
+                        alt=""
+                        className="w-7 h-7 rounded-md border border-border"
+                        style={{ imageRendering: "pixelated" }}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{a.username}</div>
+                        <div className="text-[11px] text-muted">{a.kind === "msa" ? "Microsoft" : "Оффлайн"}</div>
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => { sfx.click(); setAccDropdown(false); setPage("accounts"); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-panel-2 transition-colors text-sm text-accent cursor-pointer border-t border-border"
+                  >
+                    + Добавить аккаунт
+                  </button>
                 </div>
               )}
             </div>

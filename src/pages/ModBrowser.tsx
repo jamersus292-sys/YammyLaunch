@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Search, Download, Loader2, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
-import { api, formatDownloads, SearchHit } from "../lib/tauri";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Download, Loader2, ChevronLeft, ChevronRight, CheckCircle2, X } from "lucide-react";
+import { api, formatDownloads, Instance, SearchHit } from "../lib/tauri";
 import { useStore } from "../stores/app";
 import { sfx } from "../lib/sounds";
 import ProgressBar from "../components/ProgressBar";
 import Emoji from "../components/Emoji";
 import clsx from "clsx";
+
+const loaderLabel: Record<string, string> = {
+  fabric: "Fabric",
+  forge: "Forge",
+  neoforge: "NeoForge",
+};
 
 export default function ModBrowser() {
   const instances = useStore((s) => s.instances);
@@ -25,6 +31,7 @@ export default function ModBrowser() {
   const [loading, setLoading] = useState(false);
   const [installing, setInstalling] = useState<string | null>(null);
   const [installed, setInstalled] = useState<Set<string>>(new Set());
+  const [pickFor, setPickFor] = useState<SearchHit | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSearch = async (q: string, off: number) => {
@@ -52,18 +59,20 @@ export default function ModBrowser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, instance?.id]);
 
-  const install = async (hit: SearchHit) => {
-    if (!instance) return;
+  const install = async (hit: SearchHit, target?: Instance) => {
+    const inst = target ?? instance;
+    if (!inst) return;
     sfx.click();
+    setPickFor(null);
     setInstalling(hit.project_id);
     try {
-      const mods = await api.installMod(instance.id, hit.project_id);
+      const mods = await api.installMod(inst.id, hit.project_id);
       setInstalled((prev) => new Set(prev).add(hit.project_id));
       sfx.pop();
       toast(
         mods.length > 1
-          ? `«${hit.title}» установлен (+${mods.length - 1} зависимостей)`
-          : `«${hit.title}» установлен`,
+          ? `«${hit.title}» установлен в «${inst.name}» (+${mods.length - 1} зависимостей)`
+          : `«${hit.title}» установлен в «${inst.name}»`,
         "success"
       );
       setProgress(null);
@@ -72,6 +81,20 @@ export default function ModBrowser() {
       setProgress(null);
     } finally {
       setInstalling(null);
+    }
+  };
+
+  const onInstallClick = (hit: SearchHit) => {
+    // если сборок несколько — спрашиваем, куда ставить
+    const compatible = moddable.filter(
+      (i) => hit.versions.includes(i.gameVersion) || hit.versions.length === 0
+    );
+    const candidates = compatible.length > 0 ? compatible : moddable;
+    if (candidates.length > 1) {
+      sfx.click();
+      setPickFor(hit);
+    } else {
+      install(hit, candidates[0] ?? instance ?? undefined);
     }
   };
 
@@ -156,7 +179,7 @@ export default function ModBrowser() {
               </div>
             </div>
             <button
-              onClick={() => install(hit)}
+              onClick={() => onInstallClick(hit)}
               disabled={installing !== null}
               className={clsx(
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors shrink-0",
@@ -203,6 +226,51 @@ export default function ModBrowser() {
           </button>
         </div>
       )}
+
+      <AnimatePresence>
+        {pickFor && (
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass rounded-2xl p-6 w-[440px] space-y-4 max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Emoji name="package" /> Куда установить «{pickFor.title}»?
+                </h2>
+                <button onClick={() => setPickFor(null)} className="text-muted hover:text-text cursor-pointer">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {moddable.map((i) => {
+                  const compatible = pickFor.versions.includes(i.gameVersion);
+                  return (
+                    <button
+                      key={i.id}
+                      onClick={() => install(pickFor, i)}
+                      className={clsx(
+                        "w-full text-left px-4 py-3 rounded-xl border transition-colors cursor-pointer",
+                        compatible
+                          ? "border-border hover:border-accent/50 hover:bg-panel-2"
+                          : "border-border/40 opacity-50 hover:opacity-80"
+                      )}
+                    >
+                      <div className="font-medium text-sm">{i.name}</div>
+                      <div className="text-[11px] text-muted">
+                        {loaderLabel[i.loader]} {i.gameVersion}
+                        {!compatible && " · мод может не подойти под эту версию"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
