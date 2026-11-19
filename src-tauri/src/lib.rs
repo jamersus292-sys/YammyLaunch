@@ -107,9 +107,33 @@ async fn create_instance(app: AppHandle, state: State<'_, AppState>, args: Creat
             inst.version_id = profile.id;
         }
         "forge" => {
-            let forge_version = match args.loader_version {
-                Some(v) => v,
-                None => forge::recommended_version(&state, &args.game_version).await?,
+            // Если выбран OptiFine — Forge должен быть совместим с ним,
+            // иначе OptiFine патчит классы под старую структуру и игра крашится.
+            let forge_version = if args.optifine {
+                let entries = optifine::versions_for(&state, &args.game_version).await?;
+                let of_entry = match &args.optifine_version {
+                    Some(label) => entries
+                        .iter()
+                        .find(|e| e.label() == *label || e.patch == *label)
+                        .cloned()
+                        .unwrap_or_else(|| entries[0].clone()),
+                    None => entries[0].clone(),
+                };
+                match optifine::compatible_forge(&of_entry) {
+                    Some(v) => v,
+                    None => {
+                        return Err(error::Error::msg(format!(
+                            "OptiFine {} несовместим с Forge для {}. Выбери другую версию OptiFine или поставь Forge без OptiFine.",
+                            of_entry.label(),
+                            args.game_version
+                        )));
+                    }
+                }
+            } else {
+                match args.loader_version {
+                    Some(v) => v,
+                    None => forge::recommended_version(&state, &args.game_version).await?,
+                }
             };
             // узнаём нужную Java из ванильного version JSON
             let manifest = mojang::fetch_manifest(&state).await?;

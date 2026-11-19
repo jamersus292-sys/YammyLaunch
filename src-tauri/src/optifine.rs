@@ -30,6 +30,17 @@ impl OptifineEntry {
     }
 }
 
+/// Извлекает совместимую версию Forge из поля forge ("Forge 61.0.7" -> "61.0.7").
+/// "Forge N/A" или пусто = OptiFine не работает с Forge для этой версии.
+pub fn compatible_forge(entry: &OptifineEntry) -> Option<String> {
+    let f = entry.forge.as_deref()?.trim();
+    let v = f.strip_prefix("Forge")?.trim();
+    if v.is_empty() || v.eq_ignore_ascii_case("N/A") {
+        return None;
+    }
+    Some(v.to_string())
+}
+
 /// Числовой ранг патча для сортировки: буква (A=1..Z=26) * 1000 + номер,
 /// pre-версии ниже стабильных того же патча. Пример: I6=9000, I6_pre6=8994, I5=9000-1000.
 fn patch_rank(e: &OptifineEntry) -> i64 {
