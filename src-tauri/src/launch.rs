@@ -367,6 +367,9 @@ pub struct LaunchParams {
     pub height: u32,
     pub fullscreen: bool,
     pub extra_jvm_args: String,
+    /// путь к локальному скин-серверу для оффлайн-скинов (authlib-injector)
+    pub skin_server_url: Option<String>,
+    pub authlib_injector_path: Option<PathBuf>,
 }
 
 pub async fn launch_game(app: &AppHandle, state: &AppState, p: LaunchParams) -> Result<u32> {
@@ -457,6 +460,13 @@ pub async fn launch_game(app: &AppHandle, state: &AppState, p: LaunchParams) -> 
     }
     if p.fullscreen {
         jvm_args.push("-Dorg.lwjgl.opengl.Window.undecorated=true".into());
+    }
+    // authlib-injector для оффлайн-скинов: подменяет скин-сервер на локальный
+    if let (Some(injector), Some(url)) = (&p.authlib_injector_path, &p.skin_server_url) {
+        if injector.exists() {
+            jvm_args.push(format!("-javaagent:{}={}", injector.to_string_lossy(), url));
+            jvm_args.push("-Dauthlibinjector.side=client".into());
+        }
     }
 
     let mut game_args: Vec<String> = Vec::new();

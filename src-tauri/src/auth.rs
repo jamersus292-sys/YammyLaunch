@@ -38,6 +38,12 @@ pub struct Account {
     pub uuid: String,
     #[serde(default)]
     pub skin_url: Option<String>,
+    /// "classic" | "slim" — модель скина (для оффлайн)
+    #[serde(default)]
+    pub skin_model: Option<String>,
+    /// есть ли загруженный плащ (для оффлайн)
+    #[serde(default)]
+    pub has_cape: bool,
     #[serde(default)]
     pub created_at: Option<String>,
 }
@@ -78,6 +84,16 @@ pub fn load_accounts(state: &AppState) -> Result<AccountsFile> {
     Ok(serde_json::from_str(&s).unwrap_or_default())
 }
 
+/// Загрузка аккаунтов по корневой папке (для фонового скин-сервера без AppState).
+pub fn load_accounts_by_root(root: &std::path::Path) -> Result<AccountsFile> {
+    let path = root.join("accounts.json");
+    if !path.exists() {
+        return Ok(AccountsFile::default());
+    }
+    let s = std::fs::read_to_string(&path)?;
+    Ok(serde_json::from_str(&s).unwrap_or_default())
+}
+
 pub fn save_accounts(state: &AppState, file: &AccountsFile) -> Result<()> {
     let path = accounts_path(state)?;
     std::fs::write(path, serde_json::to_string_pretty(file)?)?;
@@ -104,6 +120,8 @@ pub fn add_offline_account(state: &AppState, username: &str) -> Result<Account> 
         username: username.to_string(),
         uuid: offline_uuid(username),
         skin_url: None,
+        skin_model: None,
+        has_cape: false,
         created_at: Some(chrono::Utc::now().to_rfc3339()),
     };
     file.accounts.push(account.clone());
@@ -199,6 +217,8 @@ struct McProfile {
     name: String,
     #[serde(default)]
     skins: Vec<McSkin>,
+    #[serde(default)]
+    capes: Vec<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -354,6 +374,8 @@ async fn complete_login(http: &reqwest::Client, ms_token: &str, refresh_token: &
             .iter()
             .find(|s| s.state == "ACTIVE")
             .map(|s| s.url.clone()),
+        skin_model: None,
+        has_cape: !profile.capes.is_empty(),
         created_at: Some(chrono::Utc::now().to_rfc3339()),
     };
     let secret = MsaSecret {

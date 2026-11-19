@@ -14,6 +14,7 @@ mod neoforge;
 mod optifine;
 mod optimize;
 mod settings;
+mod skins;
 mod state;
 mod system;
 
@@ -228,6 +229,20 @@ async fn launch_instance(app: AppHandle, state: State<'_, AppState>, instance_id
         .or(settings.java_path_override.as_deref().filter(|s| !s.is_empty()));
     let java_path = java::ensure_java(&app, &state, v.java_major(), override_path).await?;
 
+    // Оффлайн-скин: поднимаем локальный скин-сервер и authlib-injector
+    let (skin_server_url, authlib_injector_path) = if account.kind == "offline" {
+        let info = skins::info(&state, &account.id);
+        if info.has_skin || info.has_cape {
+            let url = skins::ensure_server(&state).await.ok();
+            let injector = skins::ensure_authlib_injector(&state).await.ok();
+            (url, injector)
+        } else {
+            (None, None)
+        }
+    } else {
+        (None, None)
+    };
+
     let params = launch::LaunchParams {
         instance_id: inst.id.clone(),
         instance_dir: dir,
@@ -244,6 +259,8 @@ async fn launch_instance(app: AppHandle, state: State<'_, AppState>, instance_id
         height: inst.resolution_height.unwrap_or(settings.resolution_height),
         fullscreen: settings.fullscreen,
         extra_jvm_args: settings.extra_jvm_args.clone(),
+        skin_server_url,
+        authlib_injector_path,
     };
     let pid = launch::launch_game(&app, &state, params).await?;
     instances::touch_last_played(&state, &inst.id)?;
@@ -322,6 +339,38 @@ fn close_msa_login_window(app: AppHandle) {
     if let Some(w) = app.get_webview_window("msa-login") {
         let _ = w.close();
     }
+}
+
+// ---------- скины и плащи (оффлайн) ----------
+
+#[tauri::command]
+fn set_skin(state: State<'_, AppState>, account_id: String, bytes: Vec<u8>, model: String) -> Result<skins::SkinInfo> {
+    skins::set_skin(&state, &account_id, &bytes, &model)
+}
+
+#[tauri::command]
+fn set_cape(state: State<'_, AppState>, account_id: String, bytes: Vec<u8>) -> Result<skins::SkinInfo> {
+    skins::set_cape(&state, &account_id, &bytes)
+}
+
+#[tauri::command]
+fn remove_skin(state: State<'_, AppState>, account_id: String) -> Result<skins::SkinInfo> {
+    skins::remove_skin(&state, &account_id)
+}
+
+#[tauri::command]
+fn remove_cape(state: State<'_, AppState>, account_id: String) -> Result<skins::SkinInfo> {
+    skins::remove_cape(&state, &account_id)
+}
+
+#[tauri::command]
+fn skin_preview(state: State<'_, AppState>, account_id: String) -> Result<Option<String>> {
+    skins::skin_preview(&state, &account_id)
+}
+
+#[tauri::command]
+fn cape_preview(state: State<'_, AppState>, account_id: String) -> Result<Option<String>> {
+    skins::cape_preview(&state, &account_id)
 }
 
 // ---------- моды ----------
@@ -542,6 +591,12 @@ pub fn run() {
             cancel_msa_login,
             open_msa_login_window,
             close_msa_login_window,
+            set_skin,
+            set_cape,
+            remove_skin,
+            remove_cape,
+            skin_preview,
+            cape_preview,
             search_mods,
             install_mod,
             list_mods,

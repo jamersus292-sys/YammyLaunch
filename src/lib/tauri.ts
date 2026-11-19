@@ -40,7 +40,15 @@ export interface Account {
   username: string;
   uuid: string;
   skinUrl?: string | null;
+  skinModel?: string | null;
+  hasCape?: boolean;
   createdAt?: string | null;
+}
+
+export interface SkinInfo {
+  hasSkin: boolean;
+  hasCape: boolean;
+  skinModel: string;
 }
 
 export interface AccountsFile {
@@ -216,6 +224,14 @@ export const api = {
   cancelMsaLogin: (sessionId: string) => invoke<void>("cancel_msa_login", { sessionId }),
   openMsaLoginWindow: (userCode: string) => invoke<void>("open_msa_login_window", { userCode }),
   closeMsaLoginWindow: () => invoke<void>("close_msa_login_window"),
+
+  setSkin: (accountId: string, bytes: number[], model: string) =>
+    invoke<SkinInfo>("set_skin", { accountId, bytes, model }),
+  setCape: (accountId: string, bytes: number[]) => invoke<SkinInfo>("set_cape", { accountId, bytes }),
+  removeSkin: (accountId: string) => invoke<SkinInfo>("remove_skin", { accountId }),
+  removeCape: (accountId: string) => invoke<SkinInfo>("remove_cape", { accountId }),
+  skinPreview: (accountId: string) => invoke<string | null>("skin_preview", { accountId }),
+  capePreview: (accountId: string) => invoke<string | null>("cape_preview", { accountId }),
 
   searchMods: (query: string, gameVersion: string, loader: string, offset: number) =>
     invoke<SearchResponse>("search_mods", { query, gameVersion, loader, offset }),

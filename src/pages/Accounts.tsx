@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Check, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, Check, X, Loader2, Palette } from "lucide-react";
 import { api, skinHeadUrl } from "../lib/tauri";
 import { useStore } from "../stores/app";
 import { sfx } from "../lib/sounds";
 import MsaLoginModal from "../components/MsaLoginModal";
+import SkinManager from "../components/SkinManager";
 import Emoji from "../components/Emoji";
 import clsx from "clsx";
 
@@ -15,6 +16,7 @@ export default function AccountsPage() {
 
   const [msaModal, setMsaModal] = useState(false);
   const [offlineModal, setOfflineModal] = useState(false);
+  const [skinFor, setSkinFor] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -121,6 +123,18 @@ export default function AccountsPage() {
                     >
                       <Trash2 size={13} />
                     </button>
+                    {a.kind === "offline" && (
+                      <button
+                        onClick={() => { sfx.click(); setSkinFor(skinFor === a.id ? null : a.id); }}
+                        className={clsx(
+                          "text-xs px-2 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1",
+                          skinFor === a.id ? "bg-accent/20 text-accent" : "bg-panel-2 text-muted hover:text-accent"
+                        )}
+                        title="Скин и плащ"
+                      >
+                        <Palette size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -128,6 +142,20 @@ export default function AccountsPage() {
           })}
         </AnimatePresence>
       </div>
+
+      {/* панель скина для выбранного оффлайн-аккаунта */}
+      <AnimatePresence>
+        {skinFor && accounts.accounts.find((a) => a.id === skinFor) && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="max-w-2xl"
+          >
+            <SkinManager account={accounts.accounts.find((a) => a.id === skinFor)!} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {accounts.accounts.length === 0 && (
         <div className="text-center text-muted text-sm py-10 flex flex-col items-center gap-2">
