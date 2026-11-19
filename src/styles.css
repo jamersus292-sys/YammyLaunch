@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Russo One";
+  src: url("./assets/fonts/RussoOne-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Chakra Petch";
+  src: url("./assets/fonts/ChakraPetch-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Chakra Petch";
+  src: url("./assets/fonts/ChakraPetch-500.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Chakra Petch";
+  src: url("./assets/fonts/ChakraPetch-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Chakra Petch";
+  src: url("./assets/fonts/ChakraPetch-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme {
+  --color-bg: #0c0a08;
+  --color-bg-soft: #14100c;
+  --color-panel: #1a1510;
+  --color-panel-2: #241c14;
+  --color-border: #33281c;
+  --color-accent: #ff8a1e;
+  --color-accent-2: #ff6a00;
+  --color-accent-dark: #e05500;
+  --color-accent-soft: #ffb066;
+  --color-text: #f5ede4;
+  --color-muted: #a3937f;
+  --color-danger: #ff5c5c;
+  --color-warn: #ffc94d;
+  --color-success: #7dd97b;
+  --font-sans: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Russo One", "Chakra Petch", sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", monospace;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  user-select: none;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3a2d1e; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4d3c28; }
+
+.font-display { font-family: var(--font-display); }
+
+.glass {
+  background: linear-gradient(160deg, rgba(36, 28, 20, 0.88), rgba(20, 16, 12, 0.92));
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+}
+
+.glow-accent {
+  box-shadow: 0 0 28px rgba(255, 138, 30, 0.3), 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+
+.text-gradient {
+  background: linear-gradient(92deg, #ffb066, #ff6a00);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-grid {
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% -15%, rgba(255, 106, 0, 0.16), transparent),
+    radial-gradient(ellipse 40% 30% at 85% 110%, rgba(255, 138, 30, 0.07), transparent),
+    linear-gradient(rgba(51, 40, 28, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(51, 40, 28, 0.28) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 34px 34px, 34px 34px;
+}
+
+.emoji {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.25em;
+  object-fit: contain;
+}
+.emoji-lg { width: 2em; height: 2em; vertical-align: -0.5em; }
+.emoji-xl { width: 3em; height: 3em; }
+
+input, select, textarea {
+  user-select: text;
+}
+
+.log-console {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

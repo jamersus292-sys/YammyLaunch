@@ -1,0 +1,46 @@
+﻿[package]
+name = "minecraft-launcher"
+version = "0.2.0"
+description = "YammyLaunch вЂ” Р»Р°СѓРЅС‡РµСЂ Minecraft СЃ РР-РїРѕРјРѕС‰РЅРёРєРѕРј"
+authors = ["jamersus292-sys"]
+edition = "2024"
+
+[lib]
+name = "minecraft_launcher_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.13", features = ["json", "stream", "form", "query"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha1 = "0.11"
+md-5 = "0.11"
+zip = "9"
+uuid = { version = "1", features = ["v3", "v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+keyring = "4"
+futures-util = "0.3"
+dirs = "6"
+base64 = "0.22"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+
